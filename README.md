@@ -4,5 +4,6 @@
 (1) Organize an existing EEG dataset according to the BIDS standard and publish in a git repository
 (2) Write a python based machine learning algorithm to predict behvaioral measures (object recognition) from single trial ERP amplitude recorded at stimulus encoding
 (3) Analyze data for indidividual differences across participants and plot results using custom python based plotting scripts
+(4) Organize all code into Jupyter notebooks
 
   This is a work in progress and will be updated daily...
