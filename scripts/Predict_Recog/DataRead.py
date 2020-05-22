@@ -153,3 +153,7 @@ Data_Nvl1_VP0001 = Elecs_AllNvl_VP0001[0][0]['data']
 Data_Elec1_Nvl1_VP0001 = Data_Nvl1_VP0001[0][0]
 Data_Elec2_Nvl1_VP0001 = Data_Nvl1_VP0001[0][1]
 
+
+## Convert using DataRead_CAT.py
+from DataRead_CAT import CatsReader as cr
+
