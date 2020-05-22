@@ -59,35 +59,28 @@ loadpath = '/Users/mheado86/Desktop/thesis/Data/'
 fn = 'ALLEEG_ODDSONLY.mat'
 
 
-# Convert data structure to a normal dictionary using dtypes as keys
+# 
 from scipy.io import loadmat
 data = loadmat(loadpath + fn)['S']
 
-# Accessing values                      
+# Accessing values directly in numpy void object: long form                      
 # data[0][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
 # data[0][990][1][0][40][6][0][4][2][0][500] = S(991).Novels(41).Elecs(5).data(501)
 
+
+# Convert data structure to a normal dictionary using dtypes as keys
 Subj_labels = get_labels(data.dtype.fields)
 Novels_labels = get_labels(data[0][1][1].dtype.fields)
 Elec_labels = get_labels(data[0][900][1][0][40][6].dtype.fields)
-
-data2 = {labels[n]: value for n, value in enumerate(data)}           # conversion to dict
+data2 = {Subj_labels[n]: value for n, value in enumerate(data)}
 # data2['ID'][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
 # data2['ID'][900][1][0][40][6][0][4][2][0][500]
 # Can't access other keys (Novels, BFail)
 
-# To coerce array-like values to be arrays
- data['ID'] = coerce_void(data['ID'])
+# To coerce array-like values to be arrays: helpful?
+data3['ID'] = coerce_void(data2['ID'])
 
-## HOW TO WORK WITH NESTED MATLAB STRUCTURES IN PYTHON???
-
-
-# Interpreting object loaded by scipy.io
-# dict.keys(S)                                      # dict_keys(['__header__', '__version__', '__globals__', 'S'])
-# type(S['S'])                                      # numpy.ndarray
-# S['S'].shape                                      # (1, 1000) = ALL SUBS!
-# type(S['S'][0][0])                                # numpy.void ???
-# S['S'][0][0].shape                                # () ???
+## SCRATCH: HOW TO WORK WITH NESTED MATLAB STRUCTURES IN PYTHON???
 
 # Accessing values in nested structure
 # S['S'][0][0]['ID']                                # array(['VP0001'], dtype='<U6')

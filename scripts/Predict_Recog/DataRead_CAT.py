@@ -75,7 +75,7 @@ class CatsReader:
             return np.array([]).T
         elif array.dtype == 'float64':
             #print('index: ', (*trail, column), 'e: ', e)
-            # CODE HERE WILL MAKE SERIES  :D 😍 🥰 omg too much
+            # CODE HERE WILL MAKE SERIES
             return array.T
         else:
             raise Exception('Unrecognized data set')
