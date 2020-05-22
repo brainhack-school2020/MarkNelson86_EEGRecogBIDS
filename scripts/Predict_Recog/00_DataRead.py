@@ -16,15 +16,71 @@ Created on Wed May 20 14:03:00 2020
 
 @author: mheado86
 """
+## Useful functions for .mat to pd.DataFrame
+def coerce_void(value):
+    """
+    Converts `value` to `value.dtype`
 
+    Parameters
+    ----------
+    value : array_like
+
+    Returns
+    -------
+    value : dtype
+        `Value` coerced to `dtype`
+    """
+
+    if np.squeeze(value).ndim == 0:
+        return value.dtype.type(value.squeeze())
+    else:
+        return np.squeeze(value)
+
+
+def get_labels(fields):
+    """
+    Helper function to get .mat struct keys from `fields`
+
+    Parameters
+    ----------
+    fields : dict_like
+
+    Returns
+    -------
+    labels : list
+        Struct keys
+    """
+    labels = [k for k, v in sorted(fields.items(),
+                                   key=lambda x: x[-1][-1])]
+    return labels
+
+# Define .mat file
 loadpath = '/Users/mheado86/Desktop/thesis/Data/'
 fn = 'ALLEEG_ODDSONLY.mat'
 
 
+# Convert data structure to a normal dictionary using dtypes as keys
 from scipy.io import loadmat
-S = loadmat(loadpath + fn)                                        # load data
+data = loadmat(loadpath + fn)['S']
+
+# Accessing values                      
+# data[0][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
+# data[0][990][1][0][40][6][0][4][2][0][500] = S(991).Novels(41).Elecs(5).data(501)
+
+Subj_labels = get_labels(data.dtype.fields)
+Novels_labels = get_labels(data[0][1][1].dtype.fields)
+Elec_labels = get_labels(data[0][900][1][0][40][6].dtype.fields)
+
+data2 = {labels[n]: value for n, value in enumerate(data)}           # conversion to dict
+# data2['ID'][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
+# data2['ID'][900][1][0][40][6][0][4][2][0][500]
+# Can't access other keys (Novels, BFail)
+
+# To coerce array-like values to be arrays
+ data['ID'] = coerce_void(data['ID'])
 
 ## HOW TO WORK WITH NESTED MATLAB STRUCTURES IN PYTHON???
+
 
 # Interpreting object loaded by scipy.io
 # dict.keys(S)                                      # dict_keys(['__header__', '__version__', '__globals__', 'S'])
@@ -103,3 +159,4 @@ Elecs_AllNvl_VP0001 = Nvls_npy[0]['Elecs']
 Data_Nvl1_VP0001 = Elecs_AllNvl_VP0001[0][0]['data']
 Data_Elec1_Nvl1_VP0001 = Data_Nvl1_VP0001[0][0]
 Data_Elec2_Nvl1_VP0001 = Data_Nvl1_VP0001[0][1]
+
