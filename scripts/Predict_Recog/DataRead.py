@@ -16,6 +16,11 @@ Created on Wed May 20 14:03:00 2020
 
 @author: mheado86
 """
+
+import numpy as np
+import pandas as pd
+from scipy.io import loadmat
+
 ## Useful functions for .mat to pd.DataFrame
 def coerce_void(value):
     """
@@ -54,33 +59,77 @@ def get_labels(fields):
                                    key=lambda x: x[-1][-1])]
     return labels
 
-# Define .mat file
+# load .mat file
 loadpath = '/Users/mheado86/Desktop/thesis/Data/'
 fn = 'ALLEEG_ODDSONLY.mat'
-
-
-# 
-from scipy.io import loadmat
 data = loadmat(loadpath + fn)['S']
 
-# Accessing values directly in numpy void object: long form                      
-# data[0][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
-# data[0][990][1][0][40][6][0][4][2][0][500] = S(991).Novels(41).Elecs(5).data(501)
+## Extract info  ##
+ID_Str = [np.array2string(x) for x in data[0][:]['ID']]                         # S(:).ID extracted
+Nvls_npy = [NVLS for NVLS in data[0][:]['Novels']]                              # S(:).Novels extracted
+
+# Electrode info
+Elec_Names = []
+Elec_Numbs = []
+for x in range(5):
+    Elec_Names.append(np.array2string(data[0][0][1][0][0][6][0][x][0][0]))      # Electrode names
+    Elec_Numbs.append(data[0][0][1][0][0][6][0][x][1][0][0])                    # Electrode numbers
+    
+# get structure field names
+FieldNames_Subj = get_labels(data.dtype.fields)
+FieldNames_Nvls = get_labels(data[0][1][1].dtype.fields)
+FieldNames_Elec = get_labels(data[0][900][1][0][40][6].dtype.fields)
+
+# index fieldnames at each level to be accessed in loop
+fn_N = FieldNames_Subj.index('Novels')
+fn_E = FieldNames_Nvls.index('Elecs')
+fn_D = FieldNames_Elec.index('data')
+fn_Trl = FieldNames_Nvls.index('Trln')
+fn_TsT = FieldNames_Nvls.index('Trls_since_tar')
+fn_TsO = FieldNames_Nvls.index('Trls_since_odd')
+
+subj_dict = {}
+for VP in range(len(ID_Str)):                                                   # iterate through subjs
+    
+    novel_dict = {}
+    
+    for Nn in range(len(data[0][VP][fn_N][0])):                                 # iterate through novel trials
+        
+        elec_dict = {}
+        
+        for e in range(len(data[0][VP][fn_N][0][Nn][fn_E][0])):                 # iterate through electrodes
+            
+            Delec = data[0][VP][fn_N][0][Nn][fn_E][0][e][fn_D][0].astype(float)
+            Enum = Elec_Numbs[e]
+            Ename = Elec_Names[e]
+            elec_dict[Ename] = {"number" : Enum, "data" : Delec}                # Build Elec dict
+        
+        # Build dictionary for novels each with enclosed electrode dictionary
+        Trln = data[0][VP][fn_N][0][Nn][fn_Trl][0][0]
+        TrlSncTar = data[0][VP][fn_N][0][Nn][fn_TsT][0][0]
+        TrlSncOdd = data[0][VP][fn_N][0][Nn][fn_TsO][0][0]
+        novel_dict['NVL_'+str(Nn)] = {"Trln": Trln, "Trls_since_tar": TrlSncTar, "Trls_since_odd": TrlSncOdd, "Elecs" : elec_dict}
+        
+    # Build dictionary for subjects each with enclosed novels & electrodes dictionaries
+    Subj_ID = 
 
 
-# Convert data structure to a normal dictionary using dtypes as keys
-Subj_labels = get_labels(data.dtype.fields)
-Novels_labels = get_labels(data[0][1][1].dtype.fields)
-Elec_labels = get_labels(data[0][900][1][0][40][6].dtype.fields)
-data2 = {Subj_labels[n]: value for n, value in enumerate(data)}
+# Convert data structure to a normal dictionary using dtypes as keys (NEED TO BUILD OUT FROM CORE)
+data_dict = {FieldNames_Subj[n]: value for n, value in enumerate(data)}
 # data2['ID'][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
 # data2['ID'][900][1][0][40][6][0][4][2][0][500]
 # Can't access other keys (Novels, BFail)
 
 # To coerce array-like values to be arrays: helpful?
-data3['ID'] = coerce_void(data2['ID'])
+data3['ID'] = coerce_void(data_dict['ID'])
+
+
 
 ## SCRATCH: HOW TO WORK WITH NESTED MATLAB STRUCTURES IN PYTHON???
+
+# Accessing values directly in numpy void object: long form                      
+# data[0][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
+# data[0][990][1][0][40][6][0][4][2][0][500] = S(991).Novels(41).Elecs(5).data(501)
 
 # Accessing values in nested structure
 # S['S'][0][0]['ID']                                # array(['VP0001'], dtype='<U6')
@@ -106,12 +155,12 @@ data3['ID'] = coerce_void(data2['ID'])
 # ID_Vec = [np.array2string(x) for x in S['S'][0][:]['ID']] # IDs in list as strings!
 
 # Converting numpy arrays to pandas dataframe
-import numpy as np
-import pandas as pd
+
+
 
 #### Extraction by level & variable
-ID_Str = [np.array2string(x) for x in S['S'][0][:]['ID']]         # S(:).ID extracted
-Nvls_npy = [NVLS for NVLS in S['S'][0][:]['Novels']]              # S(:).Novels extracted
+#ID_Str = [np.array2string(x) for x in S['S'][0][:]['ID']]         # S(:).ID extracted
+#Nvls_npy = [NVLS for NVLS in S['S'][0][:]['Novels']]              # S(:).Novels extracted
 
 column_names = ['Type', 'Trln', 'Time_since_tar', 'Trls_since_tar', 'Time_since_odd', 'Trls_since_odd']
 X = pd.DataFrame(Nvls_npy, columns=column_names) 
