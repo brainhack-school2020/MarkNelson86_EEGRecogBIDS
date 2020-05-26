@@ -3,9 +3,10 @@
 """
   This script reads in a nested array in .mat format and converts it to a nested dictionary.
     
-    (1) Read in EEG data (.mat file)
+    (1) Read in data: EEG data & Behavioral data (.mat files)
         - ~/Desktop/thesis/Data/ALLEEG_ODDSONLY.mat = 5 midline electrodes (AFz-Pz)
           for oddball trials only
+        - ~/Desktop/thesis/Data/BHV_ALL.mat = behavioral data for all subs
           
     (2) Convert to nested dictionary: subj_dict[<VPn>]["Novels"][<nvl_n>]["Elecs"][<'Elec_name'>]["data"]
         * Don't forget extra '' around electrode name
@@ -59,38 +60,68 @@ def get_labels(fields):
                                    key=lambda x: x[-1][-1])]
     return labels
 
-# load .mat file
+# load .mat files
 loadpath = '/Users/mheado86/Desktop/thesis/Data/'
-fn = 'ALLEEG_ODDSONLY.mat'
-data = loadmat(loadpath + fn)['S']
+fn_eeg = 'ALLEEG_ODDSONLY.mat'
+fn_behave = 'BHV_ALL.mat'
+#data = loadmat(loadpath + fn_eeg)['S']                                          # load EEG data
+BHV = loadmat(loadpath + fn_behave)['BHV']                                      # load behavioral data
 Teegs = 380
 Teege = 600
 
 ## Extract info  ##
+
 #ID_Str = [np.array2string(x) for x in data[0][:]['ID']]                         # S(:).ID extracted
 #Nvls_npy = [NVLS for NVLS in data[0][:]['Novels']]                              # S(:).Novels extracted
 
-# Electrode info
+# Electrode info from EEG structure
 Elec_Names = []
 Elec_Numbs = []
 for x in range(5):
     Elec_Names.append(np.array2string(data[0][0][1][0][0][6][0][x][0][0]))      # Electrode names
     Elec_Numbs.append(data[0][0][1][0][0][6][0][x][1][0][0])                    # Electrode numbers
     
-# get structure field names
+# get EEG structure field names
 FieldNames_Subj = get_labels(data.dtype.fields)
 FieldNames_Nvls = get_labels(data[0][1][1].dtype.fields)
 FieldNames_Elec = get_labels(data[0][900][1][0][40][6].dtype.fields)
 
-# index fieldnames at each level to be accessed in loop
-fn_N = FieldNames_Subj.index('Novels')
+# get BEHAVIORAL structure field names
+FieldNames_BHV = get_labels(BHV.dtype.fields)
+FieldNames_INFO = get_labels(BHV[0][990][1].dtype.fields)
+FieldNames_BD = get_labels(BHV[0][990][2].dtype.fields)
+
+
+
+## Create keys to access fieldnames within levels of structure ##
+
+# index fieldnames at each level of EEG structure to ease access in loop
+fn_N = FieldNames_Subj.index('Novels')                                          # main keys
 fn_E = FieldNames_Nvls.index('Elecs')
 fn_D = FieldNames_Elec.index('data')
+
 fn_Trl = FieldNames_Nvls.index('Trln')
 fn_TsT = FieldNames_Nvls.index('Trls_since_tar')
 fn_TsO = FieldNames_Nvls.index('Trls_since_odd')
 
-# loop through data structure levels and store values in nested dictionary
+# index fieldnames at each level of BEHAVIORAL structure to ease access in loop
+fn_ID = FieldNames_BHV.index('ID')                                              # main keys
+fn_I = FieldNames_BHV.index('INFO')
+fn_BD = FieldNames_BHV.index('BD')
+
+#fn_LTSK = FieldNames_INFO.index('LogsForTasks')                                 # Tasks present or not
+#fn_MANX = FieldNames_INFO.index('ManualExclusion')                              # pass/fail exclusion criteria
+#fn_RGaO = FieldNames_INFO.index('RecognitionAccOld')                            # % of OLD oddballs recognized
+
+#fn_TP = FieldNames_BD.index('Type')                                             # Trial type (2=tar, 3=odd)
+#fn_Trlbv = FieldNames_BD.index('Trnr')                                          # Trial number
+#fn_Rec = FieldNames_BD.index('OddRecognized')                                   # was the oddball later recognized or not
+#fn_RT = FieldNames_BD.index('OddRecognizedRT')                                  # RT of that response
+
+
+## LOOP THROUGH DATA STRUCTURES AND EXTRACT VALUES TO STORE IN NESTED DICTIONARY
+
+# EEG data structure
 subj_dict = {}
 for VP in range(len(data[0])):                                                   # iterate through subjs
     
@@ -103,7 +134,7 @@ for VP in range(len(data[0])):                                                  
 #        for e in range(len(data[0][VP][fn_N][0][Nn][fn_E][0])):                 # iterate through electrodes
         for e in range(2):
         
-            Delec = data[0][VP][fn_N][0][Nn][fn_E][0][e+2][fn_D][0][Teegs:Teege].tolist()      # convert to type: list
+            Delec = data[0][VP][fn_N][0][Nn][fn_E][0][e+2][fn_D][0][Teegs:Teege].tolist() # convert to type: list
             Enum = Elec_Numbs[e+2].tolist()
             Ename = Elec_Names[e+2]
             elec_dict[Ename] = {"name" : Ename, "number" : Enum, "data" : Delec} # Build Elec dict
@@ -118,28 +149,100 @@ for VP in range(len(data[0])):                                                  
     Subj_ID = data[0][VP][0][0]
     subj_dict[Subj_ID] = {"Novels" : novel_dict}
     
+# BHV structure
+bhv_dict = {}
+
+for VP in range(len(BHV[0])):                                                   # loop through subjects
+    Subj_ID = BHV[0][VP][0][0].tolist()                                         # convert subject ID to .json friendly format (str)    
+    
+    if BHV[0][VP][fn_I][0].tolist() == "Missing":                               # if subj data missing
+        bhv_dict["VP0627"] = {"ID" : Subj_ID, "INFO" : 'Missing', "BD" : 'Missing'} # SPECIAL CASE: NO DATA FOR VP0627
+    
+    else:
+        INFO_dict = {}
+        INFO_values = []
+        Ifn_number = len(BHV[0][VP][fn_I][0][0])
+        
+        for Ifn in range(Ifn_number):                                           # loop through fieldnames in INFO structure       
+            INFO_values.append(BHV[0][VP][fn_I][0][0][Ifn][0].tolist())         # convert all values to .json friendly format and add to list
+        
+        FieldNames_INFO_temp = get_labels(BHV[0][VP][fn_I].dtype.fields)
+        INFO_dict = dict(zip(FieldNames_INFO_temp,INFO_values))                 # create INFO dictionary: keys = INFO struct fieldnames, values = extracted data for VPn
+        odd_count = 0
+        novel_dict = {}
+        
+        for Nn in range(len(BHV[0][VP][fn_BD][0])):                             # loop through novels in behavioral data
+            trltyp_check = BHV[0][VP][fn_BD][0][Nn][0][0][0]
+            
+            if trltyp_check == 3:                                               # 3 = oddball trial, exclude targets
+                novel_values = []
+                BD_dict = {}
+                odd_count += 1                                                  # count number of oddballs
+                BDfn_number = len(BHV[0][VP][fn_BD][0][Nn])                     # number of fields in specific trial
+                
+                for BDfn in range(BDfn_number):                                 # loop through fieldnames in BD structure for VPn & Nn
+                    novel_values.append(BHV[0][VP][fn_BD][0][Nn][BDfn][0][0].tolist()) # convert all values to .json friendly format and add to list
+                
+                FieldNames_BD_temp = get_labels(BHV[0][VP][fn_BD].dtype.fields)
+                BD_dict = dict(zip(FieldNames_BD_temp,novel_values))            # create BD dictionary: keys = BD struct fieldnames, values = extracted data for VPn
+                novel_dict['nvl_'+str(odd_count)] = {"behav_data" : BD_dict, "NonStandardStim_Count" : Nn+1} # Store in dictionary by novel
+                    
+        bhv_dict[Subj_ID] = {"ID" : Subj_ID, "INFO" : INFO_dict, "Novels" : novel_dict}
+            
     
 
-## Save dictionary object 
+## Save dictionary objects 
 import os.path
 import json
 save_path = '/Users/mheado86/Desktop/course-materials-2020/project/MarkNelson86_EEGRecogBIDS/data/'
-file_name = 'subj_dict'
+EEG_file_name = 'subj_dict'
+BHV_file_name = 'bhv_dict'
 
-# save as .json (numpy data types not compatible with json)
-complete_name = os.path.join(save_path, file_name+'.json')
+# save EEG dictionary as .json (numpy data types not compatible with json)
+complete_name = os.path.join(save_path, EEG_file_name+'.json')
 json = json.dumps(subj_dict)
 f = open(complete_name,"w")
 f.write(json)
 f.close()
 
-# save as .txt
-complete_name = os.path.join(save_path, file_name+'.txt')
+# save BHV dictionary as .json 
+complete_name = os.path.join(save_path, BHV_file_name+'.json')
+json = json.dumps(bhv_dict)
+f = open(complete_name,"w")
+f.write(json)
+f.close()
+
+# save EEG dictionary as .txt
+complete_name = os.path.join(save_path, EEG_file_name+'.txt')
 f = open(complete_name,"w")
 f.write(str(subj_dict))
 f.close()
 
-## GUIDE to nested dictionary object: subj_dict["VPn"]["Novels"]["nvl_n"]["Elecs"]["'Elec_name'"]["data"]
+
+
+
+
+
+## SCRATCH: HOW TO WORK WITH NESTED MATLAB STRUCTURES IN PYTHON???
+
+# GUIDE: to BHV object
+# BHV[0][VPn][0][0] --> VP_ID
+
+# BHV[0][VPn][1][0][0] --> INFO structure
+# BHV[0][VPn][1][0][0][n]  --> fieldnames of INFO structure (25)
+# BHV[0][VPn][1][0][0][n]  --> to return value of fieldname n
+
+# BHV[0][VPn][2][0][0]   --> BD (behavioral data) (180+ trials)
+# BHV[0][VPn][2][0][Trln][n]  --> fieldnames of BD structure (21)
+# BHV[0][VPn][2][0][Trln][n][0][0] --> to return value of fieldname n for BD_Trln & VPn
+# BHV[0][VPn][2][0][BD_Trln][0][0][0] --> to return TrlType (1=stand,2=targ,3=odd)
+# BHV[0][VPn][2][0][BD_Trln][1][0][0] --> to return Trln
+# BHV[0][VPn][2][0][BD_Trln][18][0][0] --> to return RecogResult
+
+    
+
+## GUIDE to nested dictionary object: 
+# subj_dict["VPn"]["Novels"]["nvl_n"]["Elecs"]["'Elec_name'"]["data"]
 # keys_subj = dict.keys(subj_dict)
 
 ## Pandas DataFrame from nested dictionary: THIS DOESN'T MAKE SENSE FOR MY DATA??
@@ -152,13 +255,9 @@ f.close()
 
 
 
-
-
-## SCRATCH: HOW TO WORK WITH NESTED MATLAB STRUCTURES IN PYTHON???
-    
 # Convert data structure to a normal dictionary using dtypes as keys (NEED TO BUILD OUT FROM CORE)
 # data_dict = {FieldNames_Subj[n]: value for n, value in enumerate(data)}
-    
+   
 # data2['ID'][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
 # data2['ID'][900][1][0][40][6][0][4][2][0][500]
 # Can't access other keys (Novels, BFail)
@@ -166,9 +265,14 @@ f.close()
 # To coerce array-like values to be arrays: helpful?
 # data3['ID'] = coerce_void(data_dict['ID'])
 
+
+
+## GUIDE: to data object (S)
 # Accessing values directly in numpy void object: long form                      
 # data[0][subn][Sfn][0][NVLn][NVLfn][0][En][Efn][0][Edata]
 # data[0][990][1][0][40][6][0][4][2][0][500] = S(991).Novels(41).Elecs(5).data(501)
+
+
 
 # Accessing values in nested structure
 # S['S'][0][0]['ID']                                # array(['VP0001'], dtype='<U6')
