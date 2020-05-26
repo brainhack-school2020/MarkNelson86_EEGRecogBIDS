@@ -63,10 +63,12 @@ def get_labels(fields):
 loadpath = '/Users/mheado86/Desktop/thesis/Data/'
 fn = 'ALLEEG_ODDSONLY.mat'
 data = loadmat(loadpath + fn)['S']
+Teegs = 381
+Teege = 601
 
 ## Extract info  ##
-ID_Str = [np.array2string(x) for x in data[0][:]['ID']]                         # S(:).ID extracted
-Nvls_npy = [NVLS for NVLS in data[0][:]['Novels']]                              # S(:).Novels extracted
+#ID_Str = [np.array2string(x) for x in data[0][:]['ID']]                         # S(:).ID extracted
+#Nvls_npy = [NVLS for NVLS in data[0][:]['Novels']]                              # S(:).Novels extracted
 
 # Electrode info
 Elec_Names = []
@@ -90,7 +92,7 @@ fn_TsO = FieldNames_Nvls.index('Trls_since_odd')
 
 # loop through data structure levels and store values in nested dictionary
 subj_dict = {}
-for VP in range(len(ID_Str)):                                                   # iterate through subjs
+for VP in range(len(data[0])):                                                   # iterate through subjs
     
     novel_dict = {}
     
@@ -98,11 +100,12 @@ for VP in range(len(ID_Str)):                                                   
         
         elec_dict = {}
         
-        for e in range(len(data[0][VP][fn_N][0][Nn][fn_E][0])):                 # iterate through electrodes
-            
-            Delec = data[0][VP][fn_N][0][Nn][fn_E][0][e][fn_D][0].tolist()      # convert to type: list
-            Enum = Elec_Numbs[e].tolist()
-            Ename = Elec_Names[e]
+#        for e in range(len(data[0][VP][fn_N][0][Nn][fn_E][0])):                 # iterate through electrodes
+        for e in range(2):
+        
+            Delec = data[0][VP][fn_N][0][Nn][fn_E][0][e+2][fn_D][0][Teegs:Teege].tolist()      # convert to type: list
+            Enum = Elec_Numbs[e+2].tolist()
+            Ename = Elec_Names[e+2]
             elec_dict[Ename] = {"name" : Ename, "number" : Enum, "data" : Delec} # Build Elec dict
         
         # Build dictionary for novels each with enclosed electrode dictionary
