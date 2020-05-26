@@ -7,7 +7,8 @@ in phase 2 (recognition test) of the task from single trial EEG amplitude record
 in phase 1 (oddball, stimulus encoding). 
 
     Features:
-        Single trial mean EEG amplitude 
+        Single trial mean EEG amplitude
+        RT? Also related to recognition
         
     Labels:
         Behavioral outcome (Recognized: 1, not-recognized: 0)
