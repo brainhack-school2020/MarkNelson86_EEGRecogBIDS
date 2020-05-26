@@ -63,8 +63,8 @@ def get_labels(fields):
 loadpath = '/Users/mheado86/Desktop/thesis/Data/'
 fn = 'ALLEEG_ODDSONLY.mat'
 data = loadmat(loadpath + fn)['S']
-Teegs = 381
-Teege = 601
+Teegs = 380
+Teege = 600
 
 ## Extract info  ##
 #ID_Str = [np.array2string(x) for x in data[0][:]['ID']]                         # S(:).ID extracted
