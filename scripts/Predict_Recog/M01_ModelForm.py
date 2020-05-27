@@ -70,6 +70,27 @@ KZb.append(list(dict.keys(BHV['VP0001']['Novels']['nvl_1'])))
 KZb.append(list(dict.keys(BHV['VP0001']['Novels']['nvl_1']['behav_data'])))
   
 
+## Include/exclude subs
+VPi_exclude = []
+VPname_exclude = []
+
+for VPn in range(len(BHV)):
+    try:
+        man_exclud = BHV[KZb[0][VPn]]['INFO']['ManualExclusion']
+        rec_acc_OLD = BHV[KZb[0][VPn]]['INFO']['RecognitionAccOld']
+        if man_exclud == 1:
+            VPi_exclude.append(VPn)
+            VPname_exclude.append(BHV[KZb[0][VPn]]['ID'])
+            
+        elif rec_acc_OLD[0] <= .1 or rec_acc_OLD[0] >= .9:                                # Not enough of both outcomes
+            VPi_exclude.append(VPn)
+            VPname_exclude.append(BHV[KZb[0][VPn]]['ID'])
+            
+    except:
+        VPi_exclude.append(VPn)
+        VPname_exclude.append(BHV[KZb[0][VPn]]['ID'])
+        print("loop failed at iteration: ", VPn, ", for: ", BHV[KZb[0][VPn]]['ID'] )
+
 
 ## Extract features ##
   
@@ -92,7 +113,7 @@ KZb.append(list(dict.keys(BHV['VP0001']['Novels']['nvl_1']['behav_data'])))
 # Double checking trial numbers match up...
 # THEY DON'T! EEGtrln < BHVtrln for later trials
 # potential causes: 
-#   (1) rej trials not reflected in BHVtrln?
+#   (1) rej trials not reflected in BHVtrln?    IGNORE: GET MODEL WORKING: THEN GO TO SOURCE FILES
 list_eegtrn = []
 list_bhvtrn = []
 for i in range(5):
