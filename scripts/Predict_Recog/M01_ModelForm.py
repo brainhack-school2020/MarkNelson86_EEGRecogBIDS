@@ -29,11 +29,16 @@ import nilearn
 ## Load data ##
 
 filepath = '/Users/mheado86/Desktop/course-materials-2020/project/MarkNelson86_EEGRecogBIDS/data/'
-file_name = 'subj_dict'
-full_fn_json = os.path.join(filepath, file_name+'.json')
+EEG_file_name = 'subj_dict'
+BHV_file_name = 'bhv_dict'
+EEG_full_fn_json = os.path.join(filepath, EEG_file_name+'.json')
+BHV_full_fn_json = os.path.join(filepath, BHV_file_name+'.json')
 
-with open(full_fn_json) as file:
+with open(EEG_full_fn_json) as file:
   data = json.load(file)
+  
+with open(BHV_full_fn_json) as file:
+  BHV = json.load(file)
   
   
 ## Extract features ##
