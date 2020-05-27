@@ -64,7 +64,7 @@ def get_labels(fields):
 loadpath = '/Users/mheado86/Desktop/thesis/Data/'
 fn_eeg = 'ALLEEG_ODDSONLY.mat'
 fn_behave = 'BHV_ALL.mat'
-#data = loadmat(loadpath + fn_eeg)['S']                                          # load EEG data
+data = loadmat(loadpath + fn_eeg)['S']                                          # load EEG data
 BHV = loadmat(loadpath + fn_behave)['BHV']                                      # load behavioral data
 Teegs = 380
 Teege = 600
@@ -123,7 +123,7 @@ fn_BD = FieldNames_BHV.index('BD')
 
 # EEG data structure
 subj_dict = {}
-for VP in range(len(data[0])):                                                   # iterate through subjs
+for VP in range(len(data[0])):                                                  # iterate through subjs
     
     novel_dict = {}
     
@@ -131,7 +131,7 @@ for VP in range(len(data[0])):                                                  
         
         elec_dict = {}
         
-#        for e in range(len(data[0][VP][fn_N][0][Nn][fn_E][0])):                 # iterate through electrodes
+#        for e in range(len(data[0][VP][fn_N][0][Nn][fn_E][0])):                # iterate through electrodes
         for e in range(2):
         
             Delec = data[0][VP][fn_N][0][Nn][fn_E][0][e+2][fn_D][0][Teegs:Teege].tolist() # convert to type: list
@@ -167,6 +167,14 @@ for VP in range(len(BHV[0])):                                                   
             INFO_values.append(BHV[0][VP][fn_I][0][0][Ifn][0].tolist())         # convert all values to .json friendly format and add to list
         
         FieldNames_INFO_temp = get_labels(BHV[0][VP][fn_I].dtype.fields)
+        
+        for C in FieldNames_INFO_temp:
+            
+            if C == 'computer':                                                 # remove computer data entry (np.ndarray not .json compatible)
+                rm_index = FieldNames_INFO_temp.index('computer')
+                del INFO_values[rm_index]                                       # rm entry in both lists before zipping
+                del FieldNames_INFO_temp[rm_index]
+        
         INFO_dict = dict(zip(FieldNames_INFO_temp,INFO_values))                 # create INFO dictionary: keys = INFO struct fieldnames, values = extracted data for VPn
         odd_count = 0
         novel_dict = {}
