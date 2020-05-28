@@ -94,8 +94,40 @@ for VPn in range(len(BHV)):
 
 ## Extract features ##
   
-# Feature 1: Single trial EEG amplitude at Cz
+# Feature 1: Single trial EEG amplitude at 1 electrode (CAN I FEED IT THE WHOLE INTERVAL?)
+# Extract all data
+electrode = "'Cz'"                                                              # toggle electrode here
+EEG_Recog_Cz = []
+EEG_Unrec_Cz = []
+loop_fail = []
+behav_outcome_classify_fail = []
 
+for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          # iterate all except in list
+    EEG_Recog_Cz_temp = []
+    EEG_Unrec_Cz_temp = []
+    
+    try:
+        for Nn in range(len(BHV[KZb[0][VPn]]['Novels'])):                           # iterate novels for VPi
+            recog = BHV[KZb[0][VPn]]['Novels'][KZb[3][Nn]]['behav_data']['OddRecognized'] # behavioral outcome
+            eeg_trial = data[KZe[0][0]]['Novels'][KZe[2][0]]['Elecs'][electrode]['data'] # eeg data for trial Nn & VPn
+            
+            if recog == 1:
+                EEG_Recog_Cz_temp.append(eeg_trial)
+                
+            elif recog == 0:
+                EEG_Unrec_Cz_temp.append(eeg_trial)
+                
+            else:
+                print("Unable to classify data for VP ", VPn+1, " novel ", Nn+1)
+                behav_outcome_classify_fail_vp.append(VPn)                      # Store failed indices
+                
+        EEG_Recog_Cz.append(EEG_Recog_Cz_temp)                                  #  add eeg data to  overall nested list
+        EEG_Unrec_Cz.append(EEG_Unrec_Cz_temp)
+        
+    except:
+        print("loop fail for VP ", VPn+1, " novel ", Nn+1)
+        loop_fail.append(VPn)
+            
 
 ## GUIDES: 
 # to nested EEG dict:
