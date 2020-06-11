@@ -22,6 +22,8 @@ Created on Mon May 25 16:08:53 2020
 @author: mheado86
 """
 
+#%% Import & load
+
 def dict_depth(a_dict, level = 1): 
     # Function to find depth of a dictionary  
     
@@ -36,6 +38,8 @@ import json                                                                     
 import random as rnd
 import math
 import nilearn as nl
+import numpy as np
+import matplotlib.pyplot as plt
 
 ## Load data ##
 
@@ -51,6 +55,7 @@ with open(EEG_full_fn_json) as file:
 with open(BHV_full_fn_json) as file:
   BHV = json.load(file)
   
+#%% Prepare data for model
 
 ## Get keys from each level of dictionary ## (makes iterating dicts easier??)
 # EEG dict
@@ -142,7 +147,7 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
                 
             else:
                 print("Unable to classify data for ", VPID, " ", TRLID)
-                behav_outcome_classify_fail_trln.append(TRLID)                    # Store failed trial indices in list 
+                behav_outcome_classify_fail_trln.append(TRLID)                  # Store failed trial indices in list 
                 
                 if fail == 0:
                     fail += 1
@@ -172,7 +177,7 @@ print("The total number of recognition trials successfully sorted is ", recog_tr
 print("The total number of unrecognition trials successfully sorted is ", unrec_trl_totaln)
 
 
-
+#%% Modelling
 
 ## BUILD MODEL ##
 
@@ -197,20 +202,39 @@ EEG_Recog_Cz_Test = []
 EEG_Unrec_Cz_Test = []
 
 for TRL in range(math.ceil(len(EEG_Recog_Cz_Train) * .25)):                     # at least 25% of total trials
-    rnd_trli = rnd.randint(0,len(EEG_Recog_Cz_Train))                           # randomly index trial
+    rnd_trli = rnd.randint(0,len(EEG_Recog_Cz_Train)-1)                         # randomly index trial
     EEG_Recog_Cz_Test.append(EEG_Recog_Cz_Train.pop(rnd_trli))                  # pop trial at index out into test set
 
 
 for TRL in range(math.ceil(len(EEG_Unrec_Cz_Train) * .25)):                     # at least 25% of total trials
-    rnd_trli = rnd.randint(0,len(EEG_Unrec_Cz_Train))                           # randomly index trial
+    rnd_trli = rnd.randint(0,len(EEG_Unrec_Cz_Train)-1)                         # randomly index trial
     EEG_Unrec_Cz_Test.append(EEG_Unrec_Cz_Train.pop(rnd_trli))                  # pop trial at index out into test set
     
+    
+# SANITY CHECK: plot ERPS Rec vs Unrec
+    
+EEG_mean_Recog_Cz = [sum(x)/len(x) for x in zip(*EEG_Recog_Cz_Train)]
+EEG_mean_Unrec_Cz = [sum(x)/len(x) for x in zip(*EEG_Unrec_Cz_Train)]
+
+plt.plot(range(360,800,2),EEG_mean_Recog_Cz, label="Recog")
+plt.plot(range(360,800,2),EEG_mean_Unrec_Cz, label="Unrec")
+plt.ylabel('EEG amplitude (microvolts)')
+plt.xlabel('time (s)')
+plt.legend()
+plt.show()
+
+    
 # (3) Train model
+    
+
+    
     
     
 # (4) Test model
         
             
+
+#%% SCRATCH
 
 ## GUIDES: 
 # to nested EEG dict:
