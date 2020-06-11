@@ -33,7 +33,9 @@ def dict_depth(a_dict, level = 1):
 
 import os.path 
 import json                                                                     # json.load()
-import nilearn
+import random as rnd
+import math
+import nilearn as nl
 
 ## Load data ##
 
@@ -68,6 +70,12 @@ KZb.append(list(dict.keys(BHV['VP0001']['INFO'])))
 KZb.append(list(dict.keys(BHV['VP0001']['Novels'])))
 KZb.append(list(dict.keys(BHV['VP0001']['Novels']['nvl_1'])))
 KZb.append(list(dict.keys(BHV['VP0001']['Novels']['nvl_1']['behav_data'])))
+
+# Guide:
+# len(data['VP0001']['Novels']['nvl_1']['Elecs']["'Cz'"]['data'])  -- > 220
+# dict.keys(BHV['VP0001']['INFO'])
+# dict.keys(BHV['VP0001']['Novels']['nvl_1']['behav_data'])
+# BHV['VP0001']['Novels']['nvl_1']['behav_data']['Type']
   
 
 ## Include/exclude subs
@@ -79,10 +87,12 @@ for VPn in range(len(BHV)):
         man_exclud = BHV[KZb[0][VPn]]['INFO']['ManualExclusion']
         rec_acc_OLD = BHV[KZb[0][VPn]]['INFO']['RecognitionAccOld']
         if man_exclud == 1:
+            print('Manual exclusion: ', BHV[KZb[0][VPn]]['ID'])
             VPi_exclude.append(VPn)
             VPname_exclude.append(BHV[KZb[0][VPn]]['ID'])
             
-        elif rec_acc_OLD[0] <= .1 or rec_acc_OLD[0] >= .9:                                # Not enough of both outcomes
+        elif rec_acc_OLD[0] <= .1 or rec_acc_OLD[0] >= .9:                      # Not enough of both outcomes
+            print('Recog accuracy exclusion: ', BHV[KZb[0][VPn]]['ID'])
             VPi_exclude.append(VPn)
             VPname_exclude.append(BHV[KZb[0][VPn]]['ID'])
             
@@ -95,21 +105,34 @@ for VPn in range(len(BHV)):
 ## Extract features ##
   
 # Feature 1: Single trial EEG amplitude at 1 electrode (CAN I FEED IT THE WHOLE INTERVAL?)
-# Extract all data
-electrode = "'Cz'"                                                              # toggle electrode here
+# Extract all data (Each entry in final list is 220 EEG samples in time window )
+        
+Ename = "'Cz'"                                                                  # toggle electrode here
 EEG_Recog_Cz = []
 EEG_Unrec_Cz = []
-loop_fail = []
-behav_outcome_classify_fail = []
+loop_fail_VPn = []
+behav_outcome_classify_fail_VPn = {}
+novel_number_mismatch = []
 
 for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          # iterate all except in list
     EEG_Recog_Cz_temp = []
     EEG_Unrec_Cz_temp = []
     
     try:
-        for Nn in range(len(BHV[KZb[0][VPn]]['Novels'])):                           # iterate novels for VPi
-            recog = BHV[KZb[0][VPn]]['Novels'][KZb[3][Nn]]['behav_data']['OddRecognized'] # behavioral outcome
-            eeg_trial = data[KZe[0][0]]['Novels'][KZe[2][0]]['Elecs'][electrode]['data'] # eeg data for trial Nn & VPn
+        VPID = BHV[KZb[0][VPn]]['ID']
+        print("Sorting data for ", VPID)
+#        loop_fail_tlrn = []
+        behav_outcome_classify_fail_trln = []
+        fail = 0
+        
+#        if len(BHV[KZb[0][VPn]]['Novels']) != len(data[KZe[0][VPn]]['Novels']): # Sanity check
+#            print("Quantity of novels in BHV & data don't match for ", VPID)    # Unecessary: all match
+#            novel_number_mismatch.append(VPID)
+        
+        for Nn in range(len(BHV[KZb[0][VPn]]['Novels'])):                       # loop to sort EEG data by behavioral outcome
+            TRLID = KZb[3][Nn]
+            recog = BHV[KZb[0][VPn]]['Novels'][TRLID]['behav_data']['OddRecognized'] # behavioral outcome
+            eeg_trial = data[KZe[0][VPn]]['Novels'][TRLID]['Elecs'][Ename]['data'] # eeg data for trial Nn & VPn
             
             if recog == 1:
                 EEG_Recog_Cz_temp.append(eeg_trial)
@@ -118,15 +141,75 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
                 EEG_Unrec_Cz_temp.append(eeg_trial)
                 
             else:
-                print("Unable to classify data for VP ", VPn+1, " novel ", Nn+1)
-                behav_outcome_classify_fail_vp.append(VPn)                      # Store failed indices
+                print("Unable to classify data for ", VPID, " ", TRLID)
+                behav_outcome_classify_fail_trln.append(TRLID)                    # Store failed trial indices in list 
+                
+                if fail == 0:
+                    fail += 1
+                    
+                    
+        if fail == 1:
+            behav_outcome_classify_fail_VPn[VPID] = behav_outcome_classify_fail_trln
+                
                 
         EEG_Recog_Cz.append(EEG_Recog_Cz_temp)                                  #  add eeg data to  overall nested list
         EEG_Unrec_Cz.append(EEG_Unrec_Cz_temp)
+        TRLID = 0                                                               # reset trial ID to make except printout clear
         
     except:
-        print("loop fail for VP ", VPn+1, " novel ", Nn+1)
-        loop_fail.append(VPn)
+        print("loop fail for ", VPID, " ", TRLID)
+        loop_fail_VPn.append(VPn)
+        
+# Check number of successful trials for both results:
+recog_trl_totaln = 0
+unrec_trl_totaln = 0
+
+for SUB in range(len(EEG_Recog_Cz)):
+    recog_trl_totaln += len(EEG_Recog_Cz[SUB])
+    unrec_trl_totaln += len(EEG_Unrec_Cz[SUB])
+    
+print("The total number of recognition trials successfully sorted is ", recog_trl_totaln)
+print("The total number of unrecognition trials successfully sorted is ", unrec_trl_totaln)
+
+
+
+
+## BUILD MODEL ##
+
+# (1) Create training list (linear/unnested)
+
+EEG_Recog_Cz_Train = []
+EEG_Unrec_Cz_Train = []
+
+for SUB in range(len(EEG_Recog_Cz)):
+    
+    for TRL in range(len(EEG_Recog_Cz[SUB])):
+        EEG_Recog_Cz_Train.append(EEG_Recog_Cz[SUB][TRL])
+        
+for SUB in range(len(EEG_Unrec_Cz)):                                            # separate loop in case dimensions non-identicle
+    
+    for TRL in range(len(EEG_Unrec_Cz[SUB])):
+        EEG_Unrec_Cz_Train.append(EEG_Unrec_Cz[SUB][TRL])
+
+# (2) split data into training set & test set (75:25)
+
+EEG_Recog_Cz_Test = []
+EEG_Unrec_Cz_Test = []
+
+for TRL in range(math.ceil(len(EEG_Recog_Cz_Train) * .25)):                     # at least 25% of total trials
+    rnd_trli = rnd.randint(0,len(EEG_Recog_Cz_Train))                           # randomly index trial
+    EEG_Recog_Cz_Test.append(EEG_Recog_Cz_Train.pop(rnd_trli))                  # pop trial at index out into test set
+
+
+for TRL in range(math.ceil(len(EEG_Unrec_Cz_Train) * .25)):                     # at least 25% of total trials
+    rnd_trli = rnd.randint(0,len(EEG_Unrec_Cz_Train))                           # randomly index trial
+    EEG_Unrec_Cz_Test.append(EEG_Unrec_Cz_Train.pop(rnd_trli))                  # pop trial at index out into test set
+    
+# (3) Train model
+    
+    
+# (4) Test model
+        
             
 
 ## GUIDES: 
