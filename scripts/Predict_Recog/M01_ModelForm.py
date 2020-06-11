@@ -37,9 +37,8 @@ import os.path
 import json                                                                     # json.load()
 import random as rnd
 import math
-import nilearn as nl
 import numpy as np
-import matplotlib.pyplot as plt
+#import nilearn as nl
 
 ## Load data ##
 
@@ -216,22 +215,33 @@ for TRL in range(math.ceil(len(EEG_Unrec_Cz_Train) * .25)):                     
 EEG_mean_Recog_Cz = [sum(x)/len(x) for x in zip(*EEG_Recog_Cz_Train)]
 EEG_mean_Unrec_Cz = [sum(x)/len(x) for x in zip(*EEG_Unrec_Cz_Train)]
 
+
+import matplotlib.pyplot as plt
+
 plt.plot(range(360,800,2),EEG_mean_Recog_Cz, label="Recog")
 plt.plot(range(360,800,2),EEG_mean_Unrec_Cz, label="Unrec")
 plt.ylabel('EEG amplitude (microvolts)')
-plt.xlabel('time (s)')
+plt.xlabel('time (ms)')
+plt.title('Grand avg ERPS: Recognized vs unrecognized oddballs')
 plt.legend()
-plt.show()
+plt.show()                                                                      # ERPs look good
 
     
-# (3) Train model
-    
+# (3) Train model (SVM)
 
+X = EEG_Recog_Cz_Train + EEG_Unrec_Cz_Train                                     # Concatenate to single data vector
+Y = list(np.ones(len(EEG_Recog_Cz_Train))) + list(np.zeros(len(EEG_Unrec_Cz_Train))) # vector of 0s & 1s corresponding to unrec & recog
+
+from sklearn import svm
     
-    
+model = svm.SVC()
+model.fit(X, Y)
+
     
 # (4) Test model
-        
+
+test_results = model.predict(EEG_Recog_Cz_Test + EEG_Unrec_Cz_Test)             
+np.unique(test_results)                                                         # test results yield all 1s! WHY??
             
 
 #%% SCRATCH
