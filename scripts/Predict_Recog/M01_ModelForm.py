@@ -236,12 +236,13 @@ X = EEG_Recog_Cz_Train + EEG_Unrec_Cz_Train                                     
 X = np.array(X)                                                                 # Convert to np.array for modelling (n_samples x n_features)
 Y = list(np.ones(len(EEG_Recog_Cz_Train))) + list(np.zeros(len(EEG_Unrec_Cz_Train))) # vector of 0s & 1s corresponding to unrec & recog
 Y = ['R' if x != 0 else 'U' for x in Y]                                         # 1s = R, 0s = U (better for classifier?)
-#Y = np.array(Y)                                                                 # COnvert to np.array??
+Y = np.array(Y)                                                                 # Convert to np.array??
 
 from sklearn import svm
     
-model = svm.SVC()
-model.fit(X, Y)                             # Switch X & Y? Does it matter?  Behave measures should be Y...
+#model = svm.SVC()
+model = svm.NuSVC()
+model.fit(X, Y)
 
     
 # (4) Test model
