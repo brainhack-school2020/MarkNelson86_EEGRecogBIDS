@@ -229,6 +229,14 @@ plt.title('Grand avg ERPS: Recognized vs unrecognized oddballs')
 plt.legend()
 plt.show()                                                                      # ERPs look good
 
+# Optionally shorten data vectors
+
+EEG_Recog_Cz_Train = [x[0:70] for x in EEG_Recog_Cz_Train]                      # shorten all to 360-500ms
+EEG_Unrec_Cz_Train = [x[0:70] for x in EEG_Unrec_Cz_Train]
+
+EEG_Recog_Cz_Test = [x[0:70] for x in EEG_Recog_Cz_Test]
+EEG_Unrec_Cz_Test = [x[0:70] for x in EEG_Unrec_Cz_Test]
+
     
 # (3) Train model (SVM)
 
@@ -241,7 +249,8 @@ Y = np.array(Y)                                                                 
 from sklearn import svm
     
 #model = svm.SVC()
-model = svm.NuSVC()
+#model = svm.NuSVC()
+model = svm.LinearSVC()                                                         # This worked!
 model.fit(X, Y)
 
     
@@ -255,9 +264,16 @@ values = list(values)                                                           
 nRecog_Predict = counts[values.index('R')]                                      # number of predicted recognized
 
 
-print("The number of predicted Recognized novles is ", nRecog_Predict)
-print("out of ", len(EEG_Recog_Cz_Test), " possible...")
-print("This corresponds to a prediction accurracy of ", )
+# (5) Assess model accurracy
+
+test_results = list(test_results)
+test_results = [str(x) for x in test_results]                                   # to convert to list of strings
+
+test_results_passfail_recog = ['Pass' if x == 'R' else 'Fail' for x in test_results[0:len(EEG_Recog_Cz_Test)-1]]
+test_results_passfail_unrec = ['Pass' if x != 'R' else 'Fail' for x in test_results[len(EEG_Recog_Cz_Test):-1]]
+test_results_passfail = test_results_passfail_recog + test_results_passfail_unrec
+
+print("Model accurracy: ", math.floor(test_results_passfail.count('Pass') / len(test_results_passfail) * 100), "%" )
 
 #%% SCRATCH
 
