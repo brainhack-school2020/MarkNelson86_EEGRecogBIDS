@@ -108,10 +108,10 @@ for VPn in range(len(BHV)):
 
 ## Extract features ##
   
-# Feature 1: Single trial EEG amplitude at 1 electrode (CAN I FEED IT THE WHOLE INTERVAL?)
-# Extract all data (Each entry in final list is 220 EEG samples in time window )
+# Feature 1: single trial EEG amplitude at 1 electrode across the interval 360-500ms
         
 Ename = "'Cz'"                                                                  # toggle electrode here
+windowend = 70
 EEG_Recog_Cz = []
 EEG_Unrec_Cz = []
 loop_fail_VPn = []
@@ -139,10 +139,10 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
             eeg_trial = data[KZe[0][VPn]]['Novels'][TRLID]['Elecs'][Ename]['data'] # eeg data for trial Nn & VPn
             
             if recog == 1:
-                EEG_Recog_Cz_temp.append(eeg_trial)
+                EEG_Recog_Cz_temp.append(eeg_trial[0:windowend])
                 
             elif recog == 0:
-                EEG_Unrec_Cz_temp.append(eeg_trial)
+                EEG_Unrec_Cz_temp.append(eeg_trial[0:windowend])
                 
             else:
                 print("Unable to classify data for ", VPID, " ", TRLID)
@@ -221,21 +221,21 @@ EEG_mean_Unrec_Cz = [sum(x)/len(x) for x in zip(*EEG_Unrec_Cz_Train)]
 
 import matplotlib.pyplot as plt
 
-plt.plot(range(360,800,2),EEG_mean_Recog_Cz, label="Recog")
-plt.plot(range(360,800,2),EEG_mean_Unrec_Cz, label="Unrec")
+plt.plot(range(360,500,2),EEG_mean_Recog_Cz, label="Recog")
+plt.plot(range(360,500,2),EEG_mean_Unrec_Cz, label="Unrec")
 plt.ylabel('EEG amplitude (microvolts)')
 plt.xlabel('time (ms)')
 plt.title('Grand avg ERPS: Recognized vs unrecognized oddballs')
 plt.legend()
 plt.show()                                                                      # ERPs look good
 
-# Optionally shorten data vectors
+# Optionally shorten data vectors: no need if done in extraction loop above
 
-EEG_Recog_Cz_Train = [x[0:70] for x in EEG_Recog_Cz_Train]                      # shorten all to 360-500ms
-EEG_Unrec_Cz_Train = [x[0:70] for x in EEG_Unrec_Cz_Train]
-
-EEG_Recog_Cz_Test = [x[0:70] for x in EEG_Recog_Cz_Test]
-EEG_Unrec_Cz_Test = [x[0:70] for x in EEG_Unrec_Cz_Test]
+#EEG_Recog_Cz_Train = [x[0:70] for x in EEG_Recog_Cz_Train]                      # shorten all to 360-500ms
+#EEG_Unrec_Cz_Train = [x[0:70] for x in EEG_Unrec_Cz_Train]
+#
+#EEG_Recog_Cz_Test = [x[0:70] for x in EEG_Recog_Cz_Test]
+#EEG_Unrec_Cz_Test = [x[0:70] for x in EEG_Unrec_Cz_Test]
 
     
 # (3) Train model (SVM)
