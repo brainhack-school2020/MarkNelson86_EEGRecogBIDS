@@ -175,6 +175,9 @@ for SUB in range(len(EEG_Recog_Cz)):
 print("The total number of recognition trials successfully sorted is ", recog_trl_totaln)
 print("The total number of unrecognition trials successfully sorted is ", unrec_trl_totaln)
 
+del EEG_Recog_Cz_temp
+del EEG_Unrec_Cz_temp
+del fail
 
 #%% Modelling
 
@@ -229,20 +232,31 @@ plt.show()                                                                      
     
 # (3) Train model (SVM)
 
-X = EEG_Recog_Cz_Train + EEG_Unrec_Cz_Train                                     # Concatenate to single data vector
+X = EEG_Recog_Cz_Train + EEG_Unrec_Cz_Train                                     # Concatenate lists to single data vector
+X = np.array(X)                                                                 # Convert to np.array for modelling (n_samples x n_features)
 Y = list(np.ones(len(EEG_Recog_Cz_Train))) + list(np.zeros(len(EEG_Unrec_Cz_Train))) # vector of 0s & 1s corresponding to unrec & recog
+Y = ['R' if x != 0 else 'U' for x in Y]                                         # 1s = R, 0s = U (better for classifier?)
+#Y = np.array(Y)                                                                 # COnvert to np.array??
 
 from sklearn import svm
     
 model = svm.SVC()
-model.fit(X, Y)
+model.fit(X, Y)                             # Switch X & Y? Does it matter?  Behave measures should be Y...
 
     
 # (4) Test model
 
-test_results = model.predict(EEG_Recog_Cz_Test + EEG_Unrec_Cz_Test)             
-np.unique(test_results)                                                         # test results yield all 1s! WHY??
-            
+X_test = EEG_Recog_Cz_Test + EEG_Unrec_Cz_Test
+X_test = np.array(X_test)
+test_results = model.predict(X_test)             
+values, counts = np.unique(test_results, return_counts=True)                    # test results yield all 1s! WHY??
+values = list(values)                                                           # convert to list so indexable
+nRecog_Predict = counts[values.index('R')]                                      # number of predicted recognized
+
+
+print("The number of predicted Recognized novles is ", nRecog_Predict)
+print("out of ", len(EEG_Recog_Cz_Test), " possible...")
+print("This corresponds to a prediction accurracy of ", )
 
 #%% SCRATCH
 
