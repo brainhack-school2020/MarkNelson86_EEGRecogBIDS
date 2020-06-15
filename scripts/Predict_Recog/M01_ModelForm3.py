@@ -7,7 +7,11 @@ in phase 2 (recognition test) of the task from single trial EEG amplitude record
 in phase 1 (oddball, stimulus encoding). 
 
     Features:
-        Single trial  EEG amplitude
+        mean single trial  EEG amplitude at Fz
+        mean single trial  EEG amplitude at Cz
+        trial number
+        trials since oddball
+        trials since target
         RT? Also related to recognition
         
     Labels:
@@ -40,11 +44,11 @@ def dict_depth(a_dict, level = 1):
 
 import os.path 
 import json                                                                     # json.load()
-import random as rnd
+#import random as rnd
 import math
 import numpy as np
 import statistics as st
-#import nilearn as nl
+#import nilearn as nl 
 
 ## Load data ##
 
@@ -111,6 +115,8 @@ for VPn in range(len(BHV)):
         VPname_exclude.append(BHV[KZb[0][VPn]]['ID'])
         print("loop failed at iteration: ", VPn, ", for: ", BHV[KZb[0][VPn]]['ID'] )
 
+del rec_acc_OLD
+del man_exclud
 
 ## Extract features ##
   
@@ -120,8 +126,8 @@ for VPn in range(len(BHV)):
 # Feature 4: number of trials since last oddball
 
 
-        
-Ename = "'Cz'"                                                                  # toggle electrode here
+Ename1 = "'FCz'"                                                                # toggle electrode here        
+Ename2 = "'Cz'"                                                                 # toggle electrode here
 windowend = 70
 features_all = []
 labels_all = []
@@ -142,13 +148,18 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
         for Nn in range(len(BHV[KZb[0][VPn]]['Novels'])):                       # loop to sort EEG data by behavioral outcome
             TRLID = KZb[3][Nn]
             recog = BHV[KZb[0][VPn]]['Novels'][TRLID]['behav_data']['OddRecognized'] # behavioral outcome
-            eeg_trial = data[KZe[0][VPn]]['Novels'][TRLID]['Elecs'][Ename]['data'] # eeg data for trial Nn & VPn
+            eeg_trial1 = data[KZe[0][VPn]]['Novels'][TRLID]['Elecs'][Ename1]['data'] # eeg data for trial Nn & VPn at electrode 1
+            eeg_trial2 = data[KZe[0][VPn]]['Novels'][TRLID]['Elecs'][Ename2]['data'] # eeg data for trial Nn & VPn at electrode 2
             trialn = data[KZe[0][VPn]]['Novels'][TRLID]['Trln']
             trial_since_tar = data[KZe[0][VPn]]['Novels'][TRLID]['Trls_since_tar']
             trial_since_odd = data[KZe[0][VPn]]['Novels'][TRLID]['Trls_since_odd']
             
             if recog == 1 or recog == 0:
-                features_temp.append([st.mean(eeg_trial[0:windowend]),trialn,trial_since_tar,trial_since_odd]) # add all features
+                features_temp.append([st.mean(eeg_trial1[0:windowend]),
+                                      st.mean(eeg_trial2[0:windowend]),
+                                      trialn,
+                                      trial_since_tar,
+                                      trial_since_odd])                         # add all features
                 labels_temp.append(recog)
                 
             else:
@@ -179,15 +190,14 @@ print("The total number of recognition trials successfully sorted is ", recog_to
 print("The total number of unrecognition trials successfully sorted is ", unrec_totaln)
 
 del behav_outcome_classify_fail_trln
-del rec_acc_OLD
-del man_exclud
 del recog
 del TRLID
 del VPID
 del trial_since_odd
 del trial_since_tar
 del trialn
-del eeg_trial
+del eeg_trial1
+del eeg_trial2
 del features_temp
 del labels_temp
 del fail
@@ -213,7 +223,6 @@ X_train, X_val, y_train, y_val = train_test_split(
                                                     test_size = 0.3, 
                                                     shuffle = True,
                                                     random_state = 123)         # same shuffle each time
-                                                                       
     
 # (3) Train model (SVM)
 
@@ -235,7 +244,7 @@ X_val_np = np.array(X_val)                                                      
 test_results = model.predict(X_val_np)             
 
 
-# (5) Assess model
+# (5) Assess model output
 
 values, counts = np.unique(test_results, return_counts=True)
 
@@ -243,6 +252,6 @@ test_results = list(test_results)
 test_results = [str(x) for x in test_results]                                   # to convert to list of strings
 y_val_char = ['R' if x != 0 else 'U' for x in y_val]                            # convert validation labels to char for comparison
 
-test_results_passfail = ['Pass' if i == j else 'Fail' for i, j in zip(test_results, y_val_char)]
+test_results_passfail = ['Pass' if i == j else 'Fail' for i, j in zip(test_results, y_val_char)] # iterates 2 lists & compares values
 print("Model accurracy: ", math.floor(test_results_passfail.count('Pass') / len(test_results_passfail) * 100), "%" )
 
