@@ -123,15 +123,14 @@ for VPn in range(len(BHV)):
         
 Ename = "'Cz'"                                                                  # toggle electrode here
 windowend = 70
-EEG_Recog_Cz = []
-EEG_Unrec_Cz = []
+features_all = []
+labels_all = []
 loop_fail_VPn = []
 behav_outcome_classify_fail_VPn = {}
-novel_number_mismatch = []
 
 for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          # iterate all except in list
-    EEG_Recog_Cz_temp = []
-    EEG_Unrec_Cz_temp = []
+    features_temp = []
+    labels_temp = []
     
     try:
         VPID = BHV[KZb[0][VPn]]['ID']
@@ -139,11 +138,7 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
 #        loop_fail_tlrn = []
         behav_outcome_classify_fail_trln = []
         fail = 0
-        
-#        if len(BHV[KZb[0][VPn]]['Novels']) != len(data[KZe[0][VPn]]['Novels']): # Sanity check
-#            print("Quantity of novels in BHV & data don't match for ", VPID)    # Unecessary: all match
-#            novel_number_mismatch.append(VPID)
-        
+                
         for Nn in range(len(BHV[KZb[0][VPn]]['Novels'])):                       # loop to sort EEG data by behavioral outcome
             TRLID = KZb[3][Nn]
             recog = BHV[KZb[0][VPn]]['Novels'][TRLID]['behav_data']['OddRecognized'] # behavioral outcome
@@ -152,11 +147,9 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
             trial_since_tar = data[KZe[0][VPn]]['Novels'][TRLID]['Trls_since_tar']
             trial_since_odd = data[KZe[0][VPn]]['Novels'][TRLID]['Trls_since_odd']
             
-            if recog == 1:
-                EEG_Recog_Cz_temp.append([st.mean(eeg_trial[0:windowend]),trialn,trial_since_tar,trial_since_odd]) # add all features 
-                
-            elif recog == 0:
-                EEG_Unrec_Cz_temp.append([st.mean(eeg_trial[0:windowend]),trialn,trial_since_tar,trial_since_odd])
+            if recog == 1 or recog == 0:
+                features_temp.append([st.mean(eeg_trial[0:windowend]),trialn,trial_since_tar,trial_since_odd]) # add all features
+                labels_temp.append(recog)
                 
             else:
                 print("Unable to classify data for ", VPID, " ", TRLID)
@@ -170,8 +163,8 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
             behav_outcome_classify_fail_VPn[VPID] = behav_outcome_classify_fail_trln
                 
                 
-        EEG_Recog_Cz.append(EEG_Recog_Cz_temp)                                  #  add eeg data to  overall nested list
-        EEG_Unrec_Cz.append(EEG_Unrec_Cz_temp)
+        features_all.append(features_temp)                                      #  add eeg data to  overall nested list
+        labels_all.append(labels_temp)
         TRLID = 0                                                               # reset trial ID to make except printout clear
         
     except:
@@ -179,18 +172,24 @@ for VPn in [inc for inc in range(len(BHV)) if inc not in VPi_exclude]:          
         loop_fail_VPn.append(VPn)
         
 # Check number of successful trials for both results:
-recog_trl_totaln = 0
-unrec_trl_totaln = 0
-
-for SUB in range(len(EEG_Recog_Cz)):
-    recog_trl_totaln += len(EEG_Recog_Cz[SUB])
-    unrec_trl_totaln += len(EEG_Unrec_Cz[SUB])
+recog_totaln = sum([labels_all[S].count(1) for S in range(len(labels_all))])
+unrec_totaln = sum([labels_all[S].count(0) for S in range(len(labels_all))])
     
-print("The total number of recognition trials successfully sorted is ", recog_trl_totaln)
-print("The total number of unrecognition trials successfully sorted is ", unrec_trl_totaln)
+print("The total number of recognition trials successfully sorted is ", recog_totaln)
+print("The total number of unrecognition trials successfully sorted is ", unrec_totaln)
 
-del EEG_Recog_Cz_temp
-del EEG_Unrec_Cz_temp
+del behav_outcome_classify_fail_trln
+del rec_acc_OLD
+del man_exclud
+del recog
+del TRLID
+del VPID
+del trial_since_odd
+del trial_since_tar
+del trialn
+del eeg_trial
+del features_temp
+del labels_temp
 del fail
 
 #%% Modelling
