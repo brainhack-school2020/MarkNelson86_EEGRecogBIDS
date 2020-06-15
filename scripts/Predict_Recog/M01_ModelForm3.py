@@ -196,115 +196,53 @@ del fail
 
 ## BUILD MODEL ##
 
-# (1) Create training list (linear/unnested)
+# (1) Flatten out nested labels list, and bring 3 tier nested features list down one level
+# no longer organized nest by SUB & trl, but only by trl
 
-EEG_Recog_Cz_Train = []
-EEG_Unrec_Cz_Train = []
+labels_all = [item for sublist in labels_all for item in sublist]
+features_all = [item for sublist in features_all for item in sublist]
 
-for SUB in range(len(EEG_Recog_Cz)):
+
+# (2) split data into training set & test set (70:30)
+
+from sklearn.model_selection import train_test_split
     
-    for TRL in range(len(EEG_Recog_Cz[SUB])):
-        EEG_Recog_Cz_Train.append(EEG_Recog_Cz[SUB][TRL])
-        
-for SUB in range(len(EEG_Unrec_Cz)):                                            # separate loop in case dimensions non-identicle
-    
-    for TRL in range(len(EEG_Unrec_Cz[SUB])):
-        EEG_Unrec_Cz_Train.append(EEG_Unrec_Cz[SUB][TRL])
-
-# (2) split data into training set & test set (75:25)
-
-EEG_Recog_Cz_Test = []
-EEG_Unrec_Cz_Test = []
-
-for TRL in range(math.ceil(len(EEG_Recog_Cz_Train) * .25)):                     # at least 25% of total trials
-    rnd_trli = rnd.randint(0,len(EEG_Recog_Cz_Train)-1)                         # randomly index trial
-    EEG_Recog_Cz_Test.append(EEG_Recog_Cz_Train.pop(rnd_trli))                  # pop trial at index out into test set
-
-
-for TRL in range(math.ceil(len(EEG_Unrec_Cz_Train) * .25)):                     # at least 25% of total trials
-    rnd_trli = rnd.randint(0,len(EEG_Unrec_Cz_Train)-1)                         # randomly index trial
-    EEG_Unrec_Cz_Test.append(EEG_Unrec_Cz_Train.pop(rnd_trli))                  # pop trial at index out into test set
-    
-
-
+X_train, X_val, y_train, y_val = train_test_split(
+                                                    features_all,
+                                                    labels_all,
+                                                    test_size = 0.3, 
+                                                    shuffle = True,
+                                                    random_state = 123)         # same shuffle each time
+                                                                       
     
 # (3) Train model (SVM)
 
-X = EEG_Recog_Cz_Train + EEG_Unrec_Cz_Train                                     # Concatenate lists to single data vector
-X = np.array(X)                                                                 # Convert to np.array for modelling (n_samples x n_features)
-Y = list(np.ones(len(EEG_Recog_Cz_Train))) + list(np.zeros(len(EEG_Unrec_Cz_Train))) # vector of 0s & 1s corresponding to unrec & recog
-Y = ['R' if x != 0 else 'U' for x in Y]                                         # 1s = R, 0s = U (better for classifier?)
-Y = np.array(Y)                                                                 # Convert to np.array??
+X_train_np = np.array(X_train)                                                  # Convert to np.array for modelling (n_samples x n_features)
+y_train_char = ['R' if x != 0 else 'U' for x in y_train]                        # 1s = R, 0s = U (better for classifier?)
+y_train_np = np.array(y_train_char)                                             # Convert to np.array
 
 from sklearn import svm
     
-#model = svm.SVC()
+model = svm.SVC()
 #model = svm.NuSVC()
-model = svm.LinearSVC()                                                         # This worked!
-model.fit(X, Y)
+#model = svm.LinearSVC()                                                         # This worked!
+model.fit(X_train_np, y_train_np)
 
     
 # (4) Test model
 
-X_test = EEG_Recog_Cz_Test + EEG_Unrec_Cz_Test
-X_test = np.array(X_test)
-test_results = model.predict(X_test)             
-values, counts = np.unique(test_results, return_counts=True)                    # test results yield all 1s! WHY??
-values = list(values)                                                           # convert to list so indexable
-nRecog_Predict = counts[values.index('R')]                                      # number of predicted recognized
+X_val_np = np.array(X_val)                                                      # Convert to np.array for modelling (n_samples x n_features)
+test_results = model.predict(X_val_np)             
 
 
-# (5) Assess model accurracy
+# (5) Assess model
+
+values, counts = np.unique(test_results, return_counts=True)
 
 test_results = list(test_results)
 test_results = [str(x) for x in test_results]                                   # to convert to list of strings
+y_val_char = ['R' if x != 0 else 'U' for x in y_val]                            # convert validation labels to char for comparison
 
-test_results_passfail_recog = ['Pass' if x == 'R' else 'Fail' for x in test_results[0:len(EEG_Recog_Cz_Test)-1]]
-test_results_passfail_unrec = ['Pass' if x != 'R' else 'Fail' for x in test_results[len(EEG_Recog_Cz_Test):-1]]
-test_results_passfail = test_results_passfail_recog + test_results_passfail_unrec
-
+test_results_passfail = ['Pass' if i == j else 'Fail' for i, j in zip(test_results, y_val_char)]
 print("Model accurracy: ", math.floor(test_results_passfail.count('Pass') / len(test_results_passfail) * 100), "%" )
 
-#%% SCRATCH
-
-## GUIDES: 
-# to nested EEG dict:
-# len(data[KZe[0][VPn]][KZe[1][0]]) --> # of novels
-# data[KZe[0][VPn]][KZe[1][0]][KZe[2][i]][KZe[3][0]] --> trln
-
-# to nested BHV dict:
-# len(BHV[KZb[0][VPn]][KZb[1][2]]) --> # of novels
-# BHV[KZb[0][VPn]][KZb[1][2]][KZb[3][n]][KZb[4][0]] --> BD for novel n
-# BHV[KZb[0][VPn]][KZb[1][2]][KZb[3][n]][KZb[4][0]][KZb[5][1]] --> trln
-
-
-## SCRATCH:
-
-# Double checking trial numbers match up...
-# THEY DON'T! EEGtrln < BHVtrln for later trials
-# potential causes: 
-#   (1) rej trials not reflected in BHVtrln?    IGNORE: GET MODEL WORKING: THEN GO TO SOURCE FILES
-list_eegtrn = []
-list_bhvtrn = []
-for i in range(5):
-    try:
-        Leeg = len(data[KZe[0][i]][KZe[1][0]])
-        Lbhv = len(BHV[KZb[0][i]][KZb[1][2]])
-        
-        if Leeg == Lbhv:
-            list_eegtrn_temp = []
-            list_bhvtrn_temp = []
-            for j in range(Leeg):
-                TRNeeg = data[KZe[0][i]][KZe[1][0]][KZe[2][j]][KZe[3][0]]
-                TRNbhv = BHV[KZb[0][i]][KZb[1][2]][KZb[3][j]][KZb[4][0]][KZb[5][1]]
-                list_eegtrn_temp.append(TRNeeg)
-                list_bhvtrn_temp.append(TRNbhv)
-                #if TRNeeg != TRNbhv:
-                    #print("Mismatch in TRLn at VP: ", i+1, " , Novel: ", j+1)
-        else:
-            print("Mismatch in novel length at VP: ", i+1)
-            
-        list_eegtrn.append(list_eegtrn_temp)
-        list_bhvtrn.append(list_bhvtrn_temp)
-    except:
-        print("VP ", i, " failed try block")
